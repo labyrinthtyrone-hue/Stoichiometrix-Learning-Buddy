@@ -134,12 +134,14 @@ export const createChatSession = async (user: User, history: Message[] = []): Pr
 
 export const generateQuiz = async (difficulty: string, count: string = '5'): Promise<QuizData | null> => {
     try {
+        const systemInstruction = "You are an AI assistant that generates quizzes. Your exclusive focus is on stoichiometry for high school chemistry.";
         const prompt = `Generate a ${difficulty} quiz with ${count} multiple-choice questions about stoichiometry. Each question must have exactly 4 options.`;
 
         const response = await getAi().models.generateContent({
             model: model,
             contents: prompt,
             config: {
+                systemInstruction,
                 responseMimeType: "application/json",
                 responseSchema: quizSchema,
             },
@@ -165,12 +167,14 @@ export const generateQuiz = async (difficulty: string, count: string = '5'): Pro
 
 export const generatePracticeProblem = async (topic: string, user: User): Promise<Omit<PracticeProblemData, 'isComplete'> | null> => {
     try {
+        const systemInstruction = "You are an AI assistant that generates practice problems. Your exclusive focus is on stoichiometry for high school chemistry.";
         const prompt = `Generate a 'normal' difficulty stoichiometry practice problem about "${topic}" suitable for a ${user.age}-year-old. The problem should require a calculation.`;
 
         const response = await getAi().models.generateContent({
             model: model,
             contents: prompt,
             config: {
+                systemInstruction,
                 responseMimeType: "application/json",
                 responseSchema: practiceProblemSchema,
             },
@@ -191,11 +195,13 @@ export const generatePracticeProblem = async (topic: string, user: User): Promis
 
 export const generateFlashcards = async (topic: string, count: string): Promise<Flashcard[] | null> => {
     try {
+        const systemInstruction = "You are an AI assistant that generates educational flashcards. Your exclusive focus is on stoichiometry for high school chemistry.";
         const prompt = `Generate ${count} flashcards for the stoichiometry topic: "${topic}". For each card, provide a key 'term' and a concise 'definition'. The term could be a concept, formula, or vocabulary word. The definition should be clear and for a high school student to understand.`;
         const response = await getAi().models.generateContent({
             model: model,
             contents: prompt,
             config: {
+                systemInstruction,
                 responseMimeType: "application/json",
                 responseSchema: flashcardSchema,
             },

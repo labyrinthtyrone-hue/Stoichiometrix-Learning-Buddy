@@ -107,7 +107,7 @@ const App: React.FC = () => {
       {!isChatLaunched ? (
         <LandingPage onLaunch={() => setIsChatLaunched(true)} />
       ) : (
-        <div className="w-screen h-screen p-4 sm:p-8 flex items-center justify-center">
+        <div className="w-screen h-screen sm:p-8 flex items-center justify-center">
             <div className="w-full h-full max-w-lg mx-auto flex flex-col">
               {!user ? (
                 <WelcomeScreen onSetupComplete={handleUserSetup} />
