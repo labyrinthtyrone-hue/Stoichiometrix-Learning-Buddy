@@ -83,12 +83,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
         
         // Only send a welcome message if there's no history
         if (messages.length === 0) {
-          const welcomePrompt = `Introduce yourself as Stoichiometrix, a personal stoichiometry chatbot. Welcome the user, ${user.nickname}, and briefly explain you can help with topics like mole conversions and balancing equations. Keep it friendly and concise.`;
-          const response = await session.chat.sendMessage(welcomePrompt);
-          
+          const welcomeMessage = await session.sendMessage(`Hello, future chemist! I'm your personal stoichiometry chatbot. I'm here to help you master challenging topics like mole conversions and balancing equations.`);
           setMessages([{
             id: crypto.randomUUID(),
-            text: cleanResponse(response.text),
+            text: cleanResponse(welcomeMessage),
             sender: MessageSender.BOT
           }]);
         }
@@ -124,8 +122,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
     addMessage('...', MessageSender.BOT, { id: thinkingMessageId });
 
     try {
-      const response = await chatSession.chat.sendMessage(messageText);
-      let responseText = response.text;
+      let responseText = await chatSession.sendMessage(messageText);
       
       let quiz: { questions: QuizQuestion[] } | null = null;
       let vizData: VisualizationData | null = null;
@@ -231,19 +228,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
             correctAnswer: q.answer,
           }));
 
-          const promptForAI = `My user, ${user.nickname}, has just finished a stoichiometry quiz.
-Score: ${correctAnswers} out of ${totalQuestions}.
-Detailed Results: ${JSON.stringify(detailedResults)}.
-
-Please provide expert, personalized feedback. Your feedback should have two main parts:
-1.  **Question-by-Question Breakdown:** For each question the user answered incorrectly, provide a detailed explanation.
-    -   Clearly state the user's incorrect answer and the correct answer.
-    -   Explain *why* the correct answer is right.
-    -   Most importantly, analyze the user's incorrect choice to identify the likely misconception. For example, if they chose an answer that would be correct if they forgot to double the mass of a diatomic element, point that out. Explain the common mistake that leads to that specific wrong answer.
-2.  **Overall Performance Summary:** Based on the pattern of incorrect answers, provide a summary of potential conceptual weaknesses.
-    -   Identify any recurring types of errors (e.g., issues with mole-to-gram conversions, misunderstanding of limiting reactants).
-    -   Suggest specific topics or concepts for ${user.nickname} to review.
-    -   Maintain an encouraging, supportive, and educational tone throughout. Frame this as a learning opportunity.`;
+          const promptForAI = `I've just finished a quiz with a score of ${correctAnswers} out of ${totalQuestions}. Here are my detailed results: ${JSON.stringify(detailedResults)}. Please provide personalized feedback for ${user.nickname}. For each incorrect answer, explain why my chosen option was wrong and what makes the correct answer right. Frame your feedback in an encouraging and educational tone.`;
           const displayMessage = `Quiz complete! I scored ${correctAnswers} out of ${totalQuestions}. Let's review my answers.`;
 
           handleSendMessage(promptForAI, displayMessage);
@@ -307,43 +292,45 @@ Please provide expert, personalized feedback. Your feedback should have two main
     }
     setIsLoading(false);
   };
-  
-  const handlePracticeAnswer = (messageId: string, answer: string) => {
-    setMessages(prevMessages => {
-      const newMessages = [...prevMessages];
-      const msgIndex = newMessages.findIndex(m => m.id === messageId);
-      if (msgIndex === -1 || !newMessages[msgIndex].practiceProblem) return prevMessages;
 
-      const problemData = newMessages[msgIndex].practiceProblem!;
-      const isCorrect = answer.trim().toLowerCase() === problemData.answer.trim().toLowerCase();
+  const handlePracticeAnswer = (messageId: string, userAnswer: string) => {
+    setMessages(prev => {
+        const newMessages = [...prev];
+        const msgIndex = newMessages.findIndex(m => m.id === messageId);
+        if (msgIndex === -1 || !newMessages[msgIndex].practiceProblem) return prev;
 
-      const updatedProblemData: PracticeProblemData = {
-        ...problemData,
-        isComplete: true,
-        userAnswer: answer,
-        isCorrect: isCorrect,
-      };
+        const problemData = newMessages[msgIndex].practiceProblem!;
+        const sanitize = (str: string) => str.replace(/[^0-9.]/g, '');
+        const isCorrect = sanitize(userAnswer) === sanitize(problemData.answer);
 
-      newMessages[msgIndex] = { ...newMessages[msgIndex], practiceProblem: updatedProblemData };
-
-      if (!isCorrect) {
-        const feedbackPrompt = `My user, ${user.nickname}, just tried to solve this stoichiometry problem:
-        Problem: "${problemData.question}"
-        Correct Answer: "${problemData.answer}"
-        Correct Solution: "${problemData.solution}"
-        User's Incorrect Answer: "${answer}"
+        const updatedProblem: PracticeProblemData = {
+            ...problemData,
+            isComplete: true,
+            userAnswer: userAnswer,
+            isCorrect: isCorrect,
+        };
         
-        Please provide personalized feedback. Analyze their incorrect answer to guess their mistake. Then, give a clear, step-by-step explanation that walks them through the correct solution. Be encouraging and focus on the learning opportunity.`;
+        newMessages[msgIndex] = { ...newMessages[msgIndex], practiceProblem: updatedProblem };
+        
+        if (isCorrect) {
+            addMessage(`That's correct! Nicely done, ${user.nickname}!`, MessageSender.BOT);
+        } else {
+            const promptForAI = `My user, ${user.nickname}, tried to solve a practice problem.
+            Problem: "${problemData.question}"
+            Correct Answer: "${problemData.answer}"
+            Correct Solution Steps: "${problemData.solution}"
+            User's Incorrect Answer: "${userAnswer}"
+            Please analyze their incorrect answer. Explain their likely mistake in a helpful and encouraging way, guiding them through the correct solution steps.`;
 
-        handleSendMessage(feedbackPrompt);
-      }
-
-      return newMessages;
+            handleSendMessage(promptForAI, `Let's take a look at your answer.`);
+        }
+        return newMessages;
     });
   };
 
   const handleFlashcardRequest = async (topic: string, count: number, useSaved: boolean) => {
     setIsFlashcardSetupOpen(false);
+
     if (useSaved && savedFlashcardDecks[topic]) {
         setActiveFlashcardDeck(savedFlashcardDecks[topic]);
         return;
@@ -357,116 +344,175 @@ Please provide expert, personalized feedback. Your feedback should have two main
         const newDeck: FlashcardDeck = { topic, cards };
         onSaveFlashcards(newDeck);
         setActiveFlashcardDeck(newDeck);
+        addMessage(`Your flashcards are ready!`, MessageSender.BOT);
     } else {
         addMessage("Sorry, I couldn't generate flashcards right now. Please try again.", MessageSender.BOT);
     }
     setIsLoading(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  const activeQuiz = messages.find(m => m.quiz && !m.quiz.isFinished)?.quiz;
+  const activeQuiz = messages.slice().reverse().find(m => m.quiz && !m.quiz.isFinished)?.quiz;
 
   return (
-    <div className="w-full h-full bg-white rounded-2xl shadow-2xl flex flex-col border-2 border-black overflow-hidden">
-        {activeFlashcardDeck && (
-            <FlashcardViewer 
-                deck={activeFlashcardDeck} 
-                onClose={() => setActiveFlashcardDeck(null)} 
-            />
-        )}
-        {isBalancerOpen && <EquationBalancer onBalance={handleBalanceEquation} onClose={() => setIsBalancerOpen(false)} />}
-        {isQuizSetupOpen && <QuizSetup onStart={handleQuizRequest} onClose={() => setIsQuizSetupOpen(false)} />}
-        {isExplainerOpen && <ConceptExplainer onExplain={handleConceptRequest} onClose={() => setIsExplainerOpen(false)} progress={progress} />}
-        {isPracticeSetupOpen && <PracticeSetup onStart={handlePracticeRequest} onClose={() => setIsPracticeSetupOpen(false)} progress={progress} />}
-        {isFlashcardSetupOpen && <FlashcardSetup onStart={handleFlashcardRequest} onClose={() => setIsFlashcardSetupOpen(false)} savedDecks={savedFlashcardDecks} />}
-        
-        {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b-2 border-black bg-cyan-200">
-            <div className="flex items-center gap-3">
-                <StoichiometryIcon className="w-8 h-8 text-black" />
-                <div>
-                    <h1 className="text-lg font-bold">STOICHIOMETRIX</h1>
-                    <p className="text-xs font-semibold text-green-700 flex items-center gap-1.5">
-                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                        Online
-                    </p>
-                </div>
-            </div>
-            <div className="flex items-center gap-2">
-                <button onClick={onClearSession} className="p-2.5 bg-white rounded-full text-black hover:bg-slate-100 transition-colors border-2 border-black" aria-label="Start New Session">
-                    <RefreshIcon className="w-5 h-5" />
-                </button>
-                <button onClick={onClose} className="p-2.5 bg-white rounded-full text-black hover:bg-slate-100 transition-colors border-2 border-black" aria-label="Go to Homepage">
-                    <HomeIcon className="w-5 h-5" />
-                </button>
-            </div>
+    <div className="flex flex-col h-full bg-white rounded-2xl shadow-lg border-2 border-black">
+      <header className="flex items-center justify-between p-3 border-b-2 border-black bg-cyan-300 rounded-t-xl">
+        <div className="flex items-center">
+            <StoichiometryIcon className="w-8 h-8 mr-3 text-black" />
+            <h2 className="text-xl font-bold text-black">STOICHIOMETRIX</h2>
         </div>
-        
-        {activeQuiz && (
-            <QuizProgressBar 
-                current={activeQuiz.currentQuestionIndex} 
-                total={activeQuiz.questions.length} 
-            />
-        )}
+        <div className="flex items-center gap-2">
+            <div className="flex items-center">
+                <span className="w-3 h-3 bg-green-500 rounded-full mr-2 border-2 border-green-700"></span>
+                <span className="font-semibold text-green-800 hidden sm:inline">Online</span>
+            </div>
+            <button
+              onClick={onClearSession}
+              className="p-2 text-black bg-white rounded-full hover:bg-slate-100 transition-colors border-2 border-black"
+              aria-label="Start new session"
+            >
+              <RefreshIcon className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-black bg-white rounded-full hover:bg-slate-100 transition-colors border-2 border-black"
+              aria-label="Back to home"
+            >
+              <HomeIcon className="w-5 h-5" />
+            </button>
+        </div>
+      </header>
+      
+      {activeQuiz && (
+        <QuizProgressBar current={activeQuiz.currentQuestionIndex} total={activeQuiz.questions.length} />
+      )}
 
-        {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-cyan-50">
-            {messages.map((msg) => (
-                <MessageComponent 
-                    key={msg.id} 
-                    message={msg} 
-                    onQuizAnswer={handleQuizAnswer}
-                    onPracticeAnswer={handlePracticeAnswer}
-                />
-            ))}
-            <div ref={messagesEndRef} />
-        </div>
+      {isQuizSetupOpen && (
+        <QuizSetup 
+          onStart={handleQuizRequest}
+          onClose={() => setIsQuizSetupOpen(false)}
+        />
+      )}
+      
+      {isBalancerOpen && (
+        <EquationBalancer 
+          onBalance={handleBalanceEquation}
+          onClose={() => setIsBalancerOpen(false)}
+        />
+      )}
 
-        {/* Input Area */}
-        <div className="p-3 border-t-2 border-black bg-white">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
-                 <button onClick={() => setIsExplainerOpen(true)} className="flex items-center justify-center gap-2 p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold transition-colors border-2 border-black">
-                    <BookIcon className="w-4 h-4" /> Explain
-                </button>
-                <button onClick={() => setIsPracticeSetupOpen(true)} className="flex items-center justify-center gap-2 p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold transition-colors border-2 border-black">
-                    <PracticeIcon className="w-4 h-4" /> Practice
-                </button>
-                 <button onClick={() => setIsQuizSetupOpen(true)} className="flex items-center justify-center gap-2 p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold transition-colors border-2 border-black">
-                    <QuizIcon className="w-4 h-4" /> Quiz
-                </button>
-                <button onClick={() => setIsFlashcardSetupOpen(true)} className="flex items-center justify-center gap-2 p-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold transition-colors border-2 border-black">
-                    <FlashcardIcon className="w-4 h-4" /> Flashcards
-                </button>
-            </div>
-            <div className="flex items-center gap-2">
-                <button onClick={() => setIsBalancerOpen(true)} className="p-2.5 bg-white rounded-full text-black hover:bg-slate-100 transition-colors border-2 border-black" aria-label="Balance Equation">
-                    <BalanceIcon className="w-6 h-6" />
-                </button>
-                <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={`Ask me anything, ${user.nickname}...`}
-                    className="flex-1 w-full p-3 bg-white border-2 border-black rounded-full focus:outline-none focus:ring-2 focus:ring-violet-400 shadow-inner"
-                    disabled={isLoading}
-                />
-                <button
-                    onClick={() => handleSendMessage()}
-                    disabled={isLoading || !input.trim()}
-                    className="p-3 bg-violet-400 text-white rounded-full disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-violet-500 transition-colors border-2 border-black"
-                    aria-label="Send Message"
-                >
-                    <SendIcon className="w-6 h-6" />
-                </button>
-            </div>
-        </div>
+      {isExplainerOpen && (
+        <ConceptExplainer 
+          onExplain={handleConceptRequest}
+          onClose={() => setIsExplainerOpen(false)}
+          progress={progress}
+        />
+      )}
+
+      {isPracticeSetupOpen && (
+        <PracticeSetup
+            onStart={handlePracticeRequest}
+            onClose={() => setIsPracticeSetupOpen(false)}
+            progress={progress}
+        />
+      )}
+
+      {isFlashcardSetupOpen && (
+        <FlashcardSetup
+            onStart={handleFlashcardRequest}
+            onClose={() => setIsFlashcardSetupOpen(false)}
+            savedDecks={savedFlashcardDecks}
+        />
+      )}
+
+      {activeFlashcardDeck && (
+        <FlashcardViewer
+            deck={activeFlashcardDeck}
+            onClose={() => setActiveFlashcardDeck(null)}
+        />
+      )}
+
+      <div className="flex-1 p-4 overflow-y-auto bg-cyan-100 custom-scrollbar">
+        {messages.map((msg) => (
+          <MessageComponent 
+            key={msg.id} 
+            message={msg}
+            onQuizAnswer={handleQuizAnswer}
+            onPracticeAnswer={handlePracticeAnswer}
+          />
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="p-4 border-t-2 border-black bg-white rounded-b-xl">
+        <form
+          className="flex items-center gap-1 sm:gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSendMessage();
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setIsExplainerOpen(true)}
+            disabled={isLoading}
+            className="p-2.5 bg-white rounded-full text-black hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 border-black flex-shrink-0"
+            aria-label="Explain a concept"
+          >
+            <BookIcon className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsPracticeSetupOpen(true)}
+            disabled={isLoading}
+            className="p-2.5 bg-white rounded-full text-black hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 border-black flex-shrink-0"
+            aria-label="Start a practice problem"
+          >
+            <PracticeIcon className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsFlashcardSetupOpen(true)}
+            disabled={isLoading}
+            className="p-2.5 bg-white rounded-full text-black hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 border-black flex-shrink-0"
+            aria-label="Study flashcards"
+          >
+            <FlashcardIcon className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsQuizSetupOpen(true)}
+            disabled={isLoading}
+            className="p-2.5 bg-white rounded-full text-black hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 border-black flex-shrink-0"
+            aria-label="Start a quiz"
+          >
+            <QuizIcon className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsBalancerOpen(true)}
+            disabled={isLoading}
+            className="p-2.5 bg-white rounded-full text-black hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 border-black flex-shrink-0"
+            aria-label="Open equation balancer"
+          >
+            <BalanceIcon className="w-5 h-5" />
+          </button>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={isLoading ? "Thinking..." : "Type your message..."}
+            disabled={isLoading}
+            className="w-full py-2.5 px-4 bg-white rounded-full focus:outline-none focus:ring-2 focus:ring-violet-400 text-black placeholder-slate-500 border-2 border-black"
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !input.trim()}
+            className="p-2.5 bg-white rounded-full text-black hover:bg-slate-100 disabled:bg-slate-200 disabled:cursor-not-allowed transition-colors border-2 border-black"
+          >
+            <SendIcon className="w-5 h-5" />
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

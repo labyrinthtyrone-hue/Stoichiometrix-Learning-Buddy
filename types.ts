@@ -86,4 +86,5 @@ export interface FlashcardDeck {
 
 export interface ChatSession {
     chat: Chat;
+    sendMessage: (message: string) => Promise<string>;
 }

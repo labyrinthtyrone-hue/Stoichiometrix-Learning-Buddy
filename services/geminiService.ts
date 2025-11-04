@@ -113,44 +113,81 @@ export const createChatSession = async (user: User, history: Message[] = []): Pr
   - You can balance chemical equations. When the user asks to balance an equation, explain the result clearly.
   - Keep your responses concise and focused.`;
 
-  const geminiHistory: Content[] = history
-    .filter(m => m.sender === MessageSender.USER || m.sender === MessageSender.BOT)
+  const geminiHistoryFromMessages: Content[] = history
+    .filter(m => (m.sender === MessageSender.USER || m.sender === MessageSender.BOT) && typeof m.text === 'string')
     .map(m => ({
         role: m.sender === MessageSender.USER ? 'user' : 'model',
         parts: [{ text: m.text }]
     }));
 
-  const chat = getAi().chats.create({
+  // Per Gemini API rules, the chat history must start with a 'user' role and alternate correctly.
+  const sanitizedHistory: Content[] = [];
+  const firstUserIndex = geminiHistoryFromMessages.findIndex(m => m.role === 'user');
+
+  if (firstUserIndex !== -1) {
+    // Start from the first user message.
+    const historySlice = geminiHistoryFromMessages.slice(firstUserIndex);
+    
+    // Ensure the roles are alternating.
+    if (historySlice.length > 0) {
+      let expectedRole: 'user' | 'model' = 'user';
+      for (const message of historySlice) {
+        if (message.role === expectedRole) {
+          sanitizedHistory.push(message);
+          expectedRole = (expectedRole === 'user') ? 'model' : 'user';
+        } else {
+          // If alternation is broken, truncate the history at that point.
+          break;
+        }
+      }
+    }
+  }
+
+  // The Gemini API requires that the history provided to start a chat must end with a 'model' turn.
+  // If the last message is from the user, it means the app was likely closed before the model could respond.
+  // We remove the last user message to restore a valid chat state.
+  if (sanitizedHistory.length > 0 && sanitizedHistory[sanitizedHistory.length - 1].role === 'user') {
+    sanitizedHistory.pop();
+  }
+
+  const chat: Chat = getAi().chats.create({
     model: model,
-    history: geminiHistory,
+    history: sanitizedHistory,
     config: {
       systemInstruction: systemInstruction,
     },
   });
 
-  return { chat };
+  // Fix: Implement sendMessage to conform to the ChatSession interface
+  const sendMessage = async (message: string): Promise<string> => {
+    // FIX: According to the Gemini API guidelines, chat.sendMessage must be called with an object containing a `message` property, not a raw string.
+    const response = await chat.sendMessage({ message });
+    return response.text;
+  };
+
+  return { chat, sendMessage };
 };
 
 
 export const generateQuiz = async (difficulty: string, count: string = '5'): Promise<QuizData | null> => {
     try {
         const systemInstruction = "You are an AI assistant that generates quizzes. Your exclusive focus is on stoichiometry for high school chemistry.";
-        const prompt = `Generate a ${difficulty} quiz with ${count} multiple-choice questions about stoichiometry. Each question must have exactly 4 options.`;
+        const prompt = `Generate a JSON object for a ${difficulty} quiz about stoichiometry with exactly ${count} multiple-choice questions. Each question must have 4 options. The JSON object must match this schema: ${JSON.stringify(quizSchema)}`;
 
-        const response = await getAi().models.generateContent({
+        const response: GenerateContentResponse = await getAi().models.generateContent({
             model: model,
             contents: prompt,
             config: {
-                systemInstruction,
+                systemInstruction: systemInstruction,
                 responseMimeType: "application/json",
                 responseSchema: quizSchema,
             },
         });
-        
+
         const jsonText = response.text.trim();
-        const quiz = JSON.parse(jsonText) as { questions: QuizQuestion[] };
+        const quiz = JSON.parse(jsonText);
         
-        if (quiz.questions && quiz.questions.length > 0) {
+        if (quiz && quiz.questions && quiz.questions.length > 0) {
             return {
                 questions: quiz.questions,
                 currentQuestionIndex: 0,
@@ -160,93 +197,78 @@ export const generateQuiz = async (difficulty: string, count: string = '5'): Pro
         }
         return null;
     } catch (error) {
-        console.error("Error generating quiz:", error);
-        return null;
-    }
-};
-
-export const generatePracticeProblem = async (topic: string, user: User): Promise<Omit<PracticeProblemData, 'isComplete'> | null> => {
-    try {
-        const systemInstruction = "You are an AI assistant that generates practice problems. Your exclusive focus is on stoichiometry for high school chemistry.";
-        const prompt = `Generate a 'normal' difficulty stoichiometry practice problem about "${topic}" suitable for a ${user.age}-year-old. The problem should require a calculation.`;
-
-        const response = await getAi().models.generateContent({
-            model: model,
-            contents: prompt,
-            config: {
-                systemInstruction,
-                responseMimeType: "application/json",
-                responseSchema: practiceProblemSchema,
-            },
-        });
-
-        const jsonText = response.text.trim();
-        const problem = JSON.parse(jsonText) as { question: string; answer: string; solution: string; };
-        
-        if (problem.question && problem.answer && problem.solution) {
-            return problem;
-        }
-        return null;
-    } catch (error) {
-        console.error("Error generating practice problem:", error);
-        return null;
-    }
-};
-
-export const generateFlashcards = async (topic: string, count: string): Promise<Flashcard[] | null> => {
-    try {
-        const systemInstruction = "You are an AI assistant that generates educational flashcards. Your exclusive focus is on stoichiometry for high school chemistry.";
-        const prompt = `Generate ${count} flashcards for the stoichiometry topic: "${topic}". For each card, provide a key 'term' and a concise 'definition'. The term could be a concept, formula, or vocabulary word. The definition should be clear and for a high school student to understand.`;
-        const response = await getAi().models.generateContent({
-            model: model,
-            contents: prompt,
-            config: {
-                systemInstruction,
-                responseMimeType: "application/json",
-                responseSchema: flashcardSchema,
-            },
-        });
-        const jsonText = response.text.trim();
-        const data = JSON.parse(jsonText) as { flashcards: Flashcard[] };
-        
-        if (data.flashcards && data.flashcards.length > 0) {
-            return data.flashcards;
-        }
-        return null;
-    } catch (error) {
-        console.error("Error generating flashcards:", error);
+        console.error("Failed to generate quiz:", error);
         return null;
     }
 };
 
 export const balanceEquation = async (reactants: string, products: string): Promise<string> => {
-    try {
-        const prompt = `Balance the chemical equation: ${reactants} -> ${products}. Explain the steps to balance it clearly.`;
-        const response = await getAi().models.generateContent({
-            model: model,
-            contents: prompt,
-        });
-        return response.text;
-    } catch (error) {
-        console.error("Error balancing equation:", error);
-        return "Sorry, I couldn't balance that equation. Please check the chemical formulas.";
-    }
+    const prompt = `Balance the following chemical equation: ${reactants} -> ${products}. Provide only the balanced equation, and then on a new line, briefly explain the balancing process.`;
+    const response = await getAi().models.generateContent({
+      model: model,
+      contents: prompt,
+    });
+    return response.text;
 };
 
 export const getConceptualExplanation = async (topic: string, user: User): Promise<string> => {
+    const prompt = `My user, ${user.nickname} (${user.age} years old), wants to understand the concept of "${topic}" in stoichiometry. Explain it to them in a clear, simple, and encouraging way. Use an analogy if it helps.`;
+    const response = await getAi().models.generateContent({
+      model: model,
+      contents: prompt,
+    });
+    return response.text;
+};
+
+export const generatePracticeProblem = async (topic: string, user: User): Promise<PracticeProblemData | null> => {
     try {
-        const prompt = `As an expert chemistry tutor, explain the concept of "${topic}" to ${user.nickname}, who is ${user.age} years old. 
-        Keep the explanation clear, concise, and easy to understand. 
-        Start with a simple definition, then provide a relatable analogy or real-world example.
-        Do not ask any follow-up questions, just provide the explanation.`;
+        const systemInstruction = `You are an AI assistant that generates stoichiometry practice problems for a ${user.age}-year-old user named ${user.nickname}.`;
+        const prompt = `Generate a single word problem about "${topic}". The problem should be challenging but solvable for a high school student. Provide the question, the final numerical answer with units, and a detailed step-by-step solution. The JSON object must match this schema: ${JSON.stringify(practiceProblemSchema)}`;
+        
+        const response = await getAi().models.generateContent({
+            model: model,
+            contents: prompt,
+            config: {
+                systemInstruction: systemInstruction,
+                responseMimeType: "application/json",
+                responseSchema: practiceProblemSchema,
+            },
+        });
+
+        const data = JSON.parse(response.text.trim());
+        return data as PracticeProblemData;
+
+    } catch (error) {
+        console.error("Failed to generate practice problem:", error);
+        return null;
+    }
+};
+
+export const generateFlashcards = async (topic: string, count: string = '10'): Promise<Flashcard[] | null> => {
+    try {
+        const systemInstruction = "You are an AI assistant that generates flashcards for studying high school chemistry, specifically stoichiometry.";
+        const prompt = `Generate a JSON object containing ${count} flashcards about "${topic}". Each card should have a "term" and a "definition". The JSON object must match this schema: ${JSON.stringify(flashcardSchema)}`;
 
         const response = await getAi().models.generateContent({
             model: model,
             contents: prompt,
+            config: {
+                systemInstruction: systemInstruction,
+                responseMimeType: "application/json",
+                responseSchema: flashcardSchema,
+            },
         });
-        return response.text;
+
+        const jsonText = response.text.trim();
+        const data = JSON.parse(jsonText);
+
+        if (data && data.flashcards) {
+            return data.flashcards;
+        }
+        return null;
+
     } catch (error) {
-        console.error("Error getting conceptual explanation:", error);
-        return `Sorry, I had trouble explaining "${topic}". Please try again.`;
+        console.error("Failed to generate flashcards:", error);
+        return null;
     }
 };
