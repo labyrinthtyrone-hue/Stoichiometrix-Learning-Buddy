@@ -4,13 +4,25 @@ import ChatWindow from '@/components/ChatWindow';
 import { User, Message, ProgressState, FlashcardDeck } from '@/types';
 import { StoichiometryIcon, CloseIcon } from '@/components/IconComponents';
 
+const getInitialChatOpenState = (): boolean => {
+  try {
+    const savedSession = localStorage.getItem('stoichiometrix-session');
+    // Open if no session exists (first time user), otherwise keep it closed (as FAB).
+    return !savedSession;
+  } catch (e) {
+    console.error("Could not access localStorage", e);
+    // Default to closed if localStorage is not available.
+    return false;
+  }
+};
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [initialMessages, setInitialMessages] = useState<Message[] | undefined>(undefined);
   const [progress, setProgress] = useState<ProgressState>({});
   const [flashcardDecks, setFlashcardDecks] = useState<{ [topic: string]: FlashcardDeck }>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(getInitialChatOpenState());
 
   useEffect(() => {
     try {
@@ -94,8 +106,8 @@ const App: React.FC = () => {
     setInitialMessages(undefined);
     setProgress({});
     setFlashcardDecks({});
-    // Just close the chat. The user can click the FAB to re-open.
-    setIsChatOpen(false); 
+    // When session is cleared, keep the chat window open to show the welcome screen.
+    setIsChatOpen(true); 
   };
   
   if (isLoading) {
