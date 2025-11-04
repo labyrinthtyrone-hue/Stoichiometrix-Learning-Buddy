@@ -77,20 +77,25 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
   useEffect(() => {
     const initChat = async () => {
       setIsLoading(true);
-      // Pass the history to re-establish context with the AI
-      const session = await createChatSession(user, messages);
-      setChatSession(session);
-      
-      // Only send a welcome message if there's no history
-      if (messages.length === 0) {
-        const welcomeMessage = await session.sendMessage(`Hello, future chemist! I'm your personal stoichiometry chatbot. I'm here to help you master challenging topics like mole conversions and balancing equations.`);
-        setMessages([{
-          id: crypto.randomUUID(),
-          text: cleanResponse(welcomeMessage),
-          sender: MessageSender.BOT
-        }]);
+      try {
+        const session = await createChatSession(user, messages);
+        setChatSession(session);
+        
+        // Only send a welcome message if there's no history
+        if (messages.length === 0) {
+          const welcomeMessage = await session.sendMessage(`Hello, future chemist! I'm your personal stoichiometry chatbot. I'm here to help you master challenging topics like mole conversions and balancing equations.`);
+          setMessages([{
+            id: crypto.randomUUID(),
+            text: cleanResponse(welcomeMessage),
+            sender: MessageSender.BOT
+          }]);
+        }
+      } catch (error) {
+        console.error("Chat initialization failed:", error);
+        addMessage("Sorry, I'm having trouble connecting right now. Please try again in a moment.", MessageSender.BOT);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
     initChat();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -223,7 +228,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
             correctAnswer: q.answer,
           }));
 
-          const promptForAI = `I've just finished a quiz with a score of ${correctAnswers} out of ${totalQuestions}. Here are my detailed results: ${JSON.stringify(detailedResults)}. Please provide personalized feedback for ${user.nickname}. For each incorrect answer, explain why my chosen option was wrong and what makes the correct answer right. Frame your feedback in an encouraging and educational tone.`;
+          const promptForAI = `My user, ${user.nickname}, has just finished a stoichiometry quiz.
+Score: ${correctAnswers} out of ${totalQuestions}.
+Detailed Results: ${JSON.stringify(detailedResults)}.
+
+Please provide expert, personalized feedback. Your feedback should have two main parts:
+1.  **Question-by-Question Breakdown:** For each question the user answered incorrectly, provide a detailed explanation.
+    -   Clearly state the user's incorrect answer and the correct answer.
+    -   Explain *why* the correct answer is right.
+    -   Most importantly, analyze the user's incorrect choice to identify the likely misconception. For example, if they chose an answer that would be correct if they forgot to double the mass of a diatomic element, point that out. Explain the common mistake that leads to that specific wrong answer.
+2.  **Overall Performance Summary:** Based on the pattern of incorrect answers, provide a summary of potential conceptual weaknesses.
+    -   Identify any recurring types of errors (e.g., issues with mole-to-gram conversions, misunderstanding of limiting reactants).
+    -   Suggest specific topics or concepts for ${user.nickname} to review.
+    -   Maintain an encouraging, supportive, and educational tone throughout. Frame this as a learning opportunity.`;
           const displayMessage = `Quiz complete! I scored ${correctAnswers} out of ${totalQuestions}. Let's review my answers.`;
 
           handleSendMessage(promptForAI, displayMessage);
