@@ -48,17 +48,16 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const launchButton = document.getElementById('launch-chatbot-btn');
-    if (launchButton) {
-      const handleLaunch = () => {
-        setIsChatOpen(true);
-      };
-      launchButton.addEventListener('click', handleLaunch);
+    const handleLaunch = () => {
+      setIsChatOpen(true);
+    };
+    
+    // Listen for the custom event dispatched by the button in index.html
+    document.addEventListener('launch-chat', handleLaunch);
 
-      return () => {
-        launchButton.removeEventListener('click', handleLaunch);
-      };
-    }
+    return () => {
+      document.removeEventListener('launch-chat', handleLaunch);
+    };
   }, []);
 
   const handleUserSetup = (nickname: string, age: number) => {
