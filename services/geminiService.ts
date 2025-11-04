@@ -128,17 +128,7 @@ export const createChatSession = async (user: User, history: Message[] = []): Pr
     },
   });
 
-  const sendMessage = async (message: string): Promise<string> => {
-    try {
-      const result: GenerateContentResponse = await chat.sendMessage({ message });
-      return result.text;
-    } catch (error) {
-      console.error("Error sending message to Gemini:", error);
-      return "Sorry, I encountered an error. Please try again.";
-    }
-  };
-
-  return { chat, sendMessage };
+  return { chat };
 };
 
 

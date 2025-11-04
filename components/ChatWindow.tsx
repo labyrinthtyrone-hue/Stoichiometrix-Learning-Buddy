@@ -83,10 +83,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
         
         // Only send a welcome message if there's no history
         if (messages.length === 0) {
-          const welcomeMessage = await session.sendMessage(`Hello, future chemist! I'm your personal stoichiometry chatbot. I'm here to help you master challenging topics like mole conversions and balancing equations.`);
+          const welcomePrompt = `Hello, future chemist! I'm your personal stoichiometry chatbot. I'm here to help you master challenging topics like mole conversions and balancing equations.`;
+          const response = await session.chat.sendMessage({ message: welcomePrompt });
+          
           setMessages([{
             id: crypto.randomUUID(),
-            text: cleanResponse(welcomeMessage),
+            text: cleanResponse(response.text),
             sender: MessageSender.BOT
           }]);
         }
@@ -122,7 +124,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
     addMessage('...', MessageSender.BOT, { id: thinkingMessageId });
 
     try {
-      let responseText = await chatSession.sendMessage(messageText);
+      const response = await chatSession.chat.sendMessage({ message: messageText });
+      let responseText = response.text;
       
       let quiz: { questions: QuizQuestion[] } | null = null;
       let vizData: VisualizationData | null = null;
