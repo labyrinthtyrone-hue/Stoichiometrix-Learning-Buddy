@@ -100,6 +100,28 @@ const MessageComponent: React.FC<MessageComponentProps> = ({ message, onQuizAnsw
                 </div>
             </div>
         )}
+
+        {message.groundingChunks && message.groundingChunks.length > 0 && message.groundingChunks.some(c => c.web) && (
+          <div className="mt-3 pt-3 border-t border-black/20">
+            <h4 className="text-xs font-bold mb-1 text-slate-500">Sources:</h4>
+            <ul className="list-none p-0 m-0 space-y-1">
+              {message.groundingChunks.map((chunk, index) => (
+                chunk.web && (
+                  <li key={index} className="text-xs">
+                    <a 
+                      href={chunk.web.uri} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-violet-600 hover:text-violet-800 underline break-all"
+                    >
+                      {`${chunk.web.title || chunk.web.uri}`}
+                    </a>
+                  </li>
+                )
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { Chat } from "@google/genai";
+import { Chat, GenerateContentResponse } from "@google/genai";
 
 export interface User {
   nickname: string;
@@ -38,6 +38,15 @@ export interface PracticeProblemData {
   isCorrect?: boolean;
 }
 
+export interface GroundingChunkWeb {
+  uri: string;
+  title: string;
+}
+
+export interface GroundingChunk {
+  web?: GroundingChunkWeb;
+}
+
 export interface Message {
   id: string;
   text: string;
@@ -45,6 +54,7 @@ export interface Message {
   quiz?: QuizData;
   visualizationData?: VisualizationData;
   practiceProblem?: PracticeProblemData;
+  groundingChunks?: GroundingChunk[];
 }
 
 export interface QuizQuestion {
@@ -86,5 +96,5 @@ export interface FlashcardDeck {
 
 export interface ChatSession {
     chat: Chat;
-    sendMessage: (message: string) => Promise<string>;
+    sendMessage: (message: string) => Promise<GenerateContentResponse>;
 }

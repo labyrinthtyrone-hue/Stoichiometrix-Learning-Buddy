@@ -83,10 +83,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
         
         // Only send a welcome message if there's no history
         if (messages.length === 0) {
-          const welcomeMessage = await session.sendMessage(`Hello, future chemist! I'm your personal stoichiometry chatbot. I'm here to help you master challenging topics like mole conversions and balancing equations.`);
+          const response = await session.sendMessage(`Hello, future chemist! I'm your personal stoichiometry chatbot. I'm here to help you master challenging topics like mole conversions and balancing equations.`);
           setMessages([{
             id: crypto.randomUUID(),
-            text: cleanResponse(welcomeMessage),
+            text: cleanResponse(response.text),
             sender: MessageSender.BOT
           }]);
         }
@@ -122,7 +122,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
     addMessage('...', MessageSender.BOT, { id: thinkingMessageId });
 
     try {
-      let responseText = await chatSession.sendMessage(messageText);
+      const response = await chatSession.sendMessage(messageText);
+      let responseText = response.text;
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
       
       let quiz: { questions: QuizQuestion[] } | null = null;
       let vizData: VisualizationData | null = null;
@@ -168,7 +170,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
       }
       
       setMessages(prev => prev.map(msg => 
-        msg.id === thinkingMessageId ? { ...msg, text: cleanResponse(responseText), visualizationData: vizData ?? undefined } : msg
+        msg.id === thinkingMessageId ? { ...msg, text: cleanResponse(responseText), visualizationData: vizData ?? undefined, groundingChunks: groundingChunks ?? undefined } : msg
       ));
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -492,7 +494,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
             onClick={() => setIsBalancerOpen(true)}
             disabled={isLoading}
             className="p-2.5 bg-white rounded-full text-black hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 border-black flex-shrink-0"
-            aria-label="Open equation balancer"
+            aria-label="Balance an equation"
           >
             <BalanceIcon className="w-5 h-5" />
           </button>
@@ -500,14 +502,21 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={isLoading ? "Thinking..." : "Type your message..."}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            placeholder="Ask me anything about stoichiometry..."
+            className="flex-1 shadow-inner appearance-none border-2 border-black rounded-full w-full py-2.5 px-4 bg-white text-black leading-tight focus:outline-none focus:ring-2 focus:ring-violet-400"
             disabled={isLoading}
-            className="w-full py-2.5 px-4 bg-white rounded-full focus:outline-none focus:ring-2 focus:ring-violet-400 text-black placeholder-slate-500 border-2 border-black"
           />
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="p-2.5 bg-white rounded-full text-black hover:bg-slate-100 disabled:bg-slate-200 disabled:cursor-not-allowed transition-colors border-2 border-black"
+            className="bg-violet-400 text-white p-2.5 rounded-full hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border-2 border-black flex-shrink-0"
+            aria-label="Send message"
           >
             <SendIcon className="w-5 h-5" />
           </button>

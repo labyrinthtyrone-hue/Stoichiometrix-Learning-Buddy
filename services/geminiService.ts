@@ -1,5 +1,5 @@
 import { GoogleGenAI, Chat, GenerateContentResponse, Type, Content } from "@google/genai";
-import { User, ChatSession, QuizData, QuizQuestion, PracticeProblemData, Message, MessageSender, Flashcard } from '../types';
+import { User, ChatSession, QuizData, PracticeProblemData, Message, MessageSender, Flashcard } from '../types';
 
 let ai: GoogleGenAI;
 
@@ -98,6 +98,7 @@ export const createChatSession = async (user: User, history: Message[] = []): Pr
   - Adapt your explanations to be suitable for a ${user.age}-year-old. Use analogies and real-world examples.
   - Be friendly and personable. Address the user by their nickname, ${user.nickname}.
   - Strict Topic Limitation: Your knowledge and purpose are strictly limited to stoichiometry and closely related high school chemistry topics (e.g., chemical reactions, molar mass, the mole concept). If ${user.nickname} asks a question outside of this domain (e.g., about history, art, general math, or personal opinions), you MUST politely decline to answer and gently redirect them back to chemistry. For example: "That's an interesting question, ${user.nickname}, but my expertise is focused on chemistry. Shall we get back to stoichiometry? I can help with balancing equations or calculating theoretical yield." Do not attempt to answer off-topic questions.
+  - Grounded Answers: For complex questions or topics related to current events or recent scientific discoveries, use your Google Search tool to find up-to-date, accurate information. When you use search, you MUST cite your sources.
   - Error Correction: When ${user.nickname} makes a mistake while solving a problem, do not just say they are wrong. Instead, pinpoint the specific step or calculation that is incorrect. Clearly explain *why* it's a mistake and gently guide them toward the correct method. For example, say "That's a good try, ${user.nickname}! It looks like you might have used the molar mass for oxygen atoms (O) instead of oxygen gas (O2). Remember, oxygen is diatomic..."
   - Practice Problem Feedback: When the user answers a practice problem incorrectly, you will receive the original problem, the correct solution, the correct answer, and the user's incorrect answer. Your task is to analyze their answer, identify their likely mistake, and provide a clear, step-by-step explanation guiding them to the correct solution. Be encouraging and focus on the learning process.
   - Quiz Feedback: When the user finishes a quiz and you receive their detailed results, provide a summary of their performance. For EACH question they answered incorrectly, provide a clear explanation for why their chosen answer was wrong and why the correct answer is right. Be encouraging and suggest topics to review based on their mistakes.
@@ -155,14 +156,13 @@ export const createChatSession = async (user: User, history: Message[] = []): Pr
     history: sanitizedHistory,
     config: {
       systemInstruction: systemInstruction,
+      tools: [{googleSearch: {}}],
     },
   });
 
-  // Fix: Implement sendMessage to conform to the ChatSession interface
-  const sendMessage = async (message: string): Promise<string> => {
-    // FIX: According to the Gemini API guidelines, chat.sendMessage must be called with an object containing a `message` property, not a raw string.
+  const sendMessage = async (message: string): Promise<GenerateContentResponse> => {
     const response = await chat.sendMessage({ message });
-    return response.text;
+    return response;
   };
 
   return { chat, sendMessage };
