@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlashcardDeck } from '@/types';
+import { FlashcardDeck } from '../types';
 
 interface FlashcardSetupProps {
   onStart: (topic: string, count: number, useSaved: boolean) => void;

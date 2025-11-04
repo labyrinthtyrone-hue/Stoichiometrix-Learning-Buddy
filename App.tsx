@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import WelcomeScreen from '@/components/WelcomeScreen';
-import ChatWindow from '@/components/ChatWindow';
-import { User, Message, ProgressState, FlashcardDeck } from '@/types';
-import { StoichiometryIcon, CloseIcon } from '@/components/IconComponents';
+import WelcomeScreen from './components/WelcomeScreen';
+import ChatWindow from './components/ChatWindow';
+import { User, Message, ProgressState, FlashcardDeck } from './types';
+import { StoichiometryIcon, CloseIcon } from './components/IconComponents';
 
 const getInitialChatOpenState = (): boolean => {
   try {

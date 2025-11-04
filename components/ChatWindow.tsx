@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Message, MessageSender, QuizDifficulty, QuizData, ChatSession, QuizQuestion, VisualizationData, PracticeProblemData, ProgressState, FlashcardDeck } from '@/types';
-import { createChatSession, generateQuiz, balanceEquation, getConceptualExplanation, generatePracticeProblem, generateFlashcards } from '@/services/geminiService';
-import MessageComponent from '@/components/Message';
-import { BalanceIcon, SendIcon, StoichiometryIcon, QuizIcon, BookIcon, PracticeIcon, RefreshIcon, FlashcardIcon, CloseIcon } from '@/components/IconComponents';
-import EquationBalancer from '@/components/EquationBalancer';
-import QuizProgressBar from '@/components/QuizProgressBar';
-import QuizSetup from '@/components/QuizSetup';
-import ConceptExplainer from '@/components/ConceptExplainer';
-import PracticeSetup from '@/components/PracticeSetup';
-import FlashcardSetup from '@/components/FlashcardSetup';
-import FlashcardViewer from '@/components/FlashcardViewer';
+import { User, Message, MessageSender, QuizDifficulty, QuizData, ChatSession, QuizQuestion, VisualizationData, PracticeProblemData, ProgressState, FlashcardDeck } from '../types';
+import { createChatSession, generateQuiz, balanceEquation, getConceptualExplanation, generatePracticeProblem, generateFlashcards } from '../services/geminiService';
+import MessageComponent from './Message';
+import { BalanceIcon, SendIcon, StoichiometryIcon, QuizIcon, BookIcon, PracticeIcon, RefreshIcon, FlashcardIcon, CloseIcon } from './IconComponents';
+import EquationBalancer from './EquationBalancer';
+import QuizProgressBar from './QuizProgressBar';
+import QuizSetup from './QuizSetup';
+import ConceptExplainer from './ConceptExplainer';
+import PracticeSetup from './PracticeSetup';
+import FlashcardSetup from './FlashcardSetup';
+import FlashcardViewer from './FlashcardViewer';
 
 
 interface ChatWindowProps {

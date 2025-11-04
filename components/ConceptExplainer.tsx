@@ -1,6 +1,6 @@
 import React from 'react';
-import { ProgressState } from '@/types';
-import { CheckIcon } from '@/components/IconComponents';
+import { ProgressState } from '../types';
+import { CheckIcon } from './IconComponents';
 
 interface ConceptExplainerProps {
   onExplain: (topic: string) => void;

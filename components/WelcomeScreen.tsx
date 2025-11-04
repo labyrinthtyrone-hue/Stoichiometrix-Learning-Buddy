@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StoichiometryIcon } from '@/components/IconComponents';
+import { StoichiometryIcon } from './IconComponents';
 
 interface WelcomeScreenProps {
   onSetupComplete: (nickname: string, age: number) => void;

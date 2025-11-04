@@ -1,5 +1,5 @@
 import { GoogleGenAI, Chat, GenerateContentResponse, Type, Content } from "@google/genai";
-import { User, ChatSession, QuizData, QuizQuestion, PracticeProblemData, Message, MessageSender, Flashcard } from '@/types';
+import { User, ChatSession, QuizData, QuizQuestion, PracticeProblemData, Message, MessageSender, Flashcard } from '../types';
 
 // Per guidelines, API key must be from process.env.API_KEY
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { QuizDifficulty } from '@/types';
+import { QuizDifficulty } from '../types';
 
 interface QuizSetupProps {
   onStart: (difficulty: QuizDifficulty, count: number) => void;

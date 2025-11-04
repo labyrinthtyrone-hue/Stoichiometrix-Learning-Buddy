@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PracticeProblemData } from '@/types';
+import { PracticeProblemData } from '../types';
 
 interface PracticeProblemProps {
   problemData: PracticeProblemData;

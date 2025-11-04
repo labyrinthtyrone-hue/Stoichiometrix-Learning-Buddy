@@ -1,6 +1,6 @@
 import React from 'react';
-import { VisualizationData, BarChartData, FlowDiagramData } from '@/types';
-import { ArrowIcon } from '@/components/IconComponents';
+import { VisualizationData, BarChartData, FlowDiagramData } from '../types';
+import { ArrowIcon } from './IconComponents';
 
 interface DataVisualizerProps {
   data: VisualizationData;

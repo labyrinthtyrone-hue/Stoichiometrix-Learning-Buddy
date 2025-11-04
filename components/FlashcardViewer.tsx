@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { FlashcardDeck } from '@/types';
-import { ArrowIcon } from '@/components/IconComponents';
+import { FlashcardDeck } from '../types';
+import { ArrowIcon } from './IconComponents';
 
 interface FlashcardViewerProps {
   deck: FlashcardDeck;

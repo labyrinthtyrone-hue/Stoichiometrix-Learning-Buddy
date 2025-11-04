@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Message, MessageSender, QuizQuestion } from '@/types';
-import DataVisualizer from '@/components/DataVisualizer';
-import PracticeProblem from '@/components/PracticeProblem';
+import { Message, MessageSender, QuizQuestion } from '../types';
+import DataVisualizer from './DataVisualizer';
+import PracticeProblem from './PracticeProblem';
 
 interface MessageComponentProps {
   message: Message;
