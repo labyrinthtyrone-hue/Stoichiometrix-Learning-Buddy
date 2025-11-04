@@ -10,7 +10,7 @@ const App: React.FC = () => {
   const [progress, setProgress] = useState<ProgressState>({});
   const [flashcardDecks, setFlashcardDecks] = useState<{ [topic: string]: FlashcardDeck }>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -94,9 +94,8 @@ const App: React.FC = () => {
     setInitialMessages(undefined);
     setProgress({});
     setFlashcardDecks({});
-    // No full page reload, just close the chat and let the user restart
+    // Just close the chat. The user can click the FAB to re-open.
     setIsChatOpen(false); 
-    setTimeout(() => setIsChatOpen(true), 100);
   };
   
   if (isLoading) {
