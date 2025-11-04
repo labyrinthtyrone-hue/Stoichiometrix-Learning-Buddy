@@ -10,7 +10,7 @@ const App: React.FC = () => {
   const [progress, setProgress] = useState<ProgressState>({});
   const [flashcardDecks, setFlashcardDecks] = useState<{ [topic: string]: FlashcardDeck }>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(true);
 
   useEffect(() => {
     try {
