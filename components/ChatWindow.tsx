@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Message, MessageSender, QuizDifficulty, QuizData, ChatSession, QuizQuestion, VisualizationData, PracticeProblemData, ProgressState, FlashcardDeck } from '../types';
 import { createChatSession, generateQuiz, balanceEquation, getConceptualExplanation, generatePracticeProblem, generateFlashcards } from '../services/geminiService';
 import MessageComponent from './Message';
-import { BalanceIcon, SendIcon, StoichiometryIcon, QuizIcon, BookIcon, PracticeIcon, RefreshIcon, FlashcardIcon, CloseIcon } from './IconComponents';
+import { BalanceIcon, SendIcon, StoichiometryIcon, QuizIcon, BookIcon, PracticeIcon, RefreshIcon, FlashcardIcon, HomeIcon } from './IconComponents';
 import EquationBalancer from './EquationBalancer';
 import QuizProgressBar from './QuizProgressBar';
 import QuizSetup from './QuizSetup';
@@ -370,9 +370,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ user, initialMessages, onClearS
             <button
               onClick={onClose}
               className="p-2 text-black bg-white rounded-full hover:bg-slate-100 transition-colors border-2 border-black"
-              aria-label="Close chat"
+              aria-label="Back to home"
             >
-              <CloseIcon className="w-5 h-5" />
+              <HomeIcon className="w-5 h-5" />
             </button>
         </div>
       </header>

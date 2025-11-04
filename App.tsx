@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import WelcomeScreen from './components/WelcomeScreen';
 import ChatWindow from './components/ChatWindow';
+import LandingPage from './components/LandingPage';
 import { User, Message, ProgressState, FlashcardDeck } from './types';
-import { StoichiometryIcon } from './components/IconComponents';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -11,14 +11,11 @@ const App: React.FC = () => {
   const [flashcardDecks, setFlashcardDecks] = useState<{ [topic: string]: FlashcardDeck }>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isChatLaunched, setIsChatLaunched] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     try {
       const savedSession = localStorage.getItem('stoichiometrix-session');
       if (savedSession) {
-        // If a session exists, the widget has been used before.
-        // Show the FAB for returning users.
         setIsChatLaunched(true);
 
         const { user: savedUser, messages: savedMessages } = JSON.parse(savedSession);
@@ -39,25 +36,10 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error("Failed to load session from localStorage:", error);
-      // Clear potentially corrupted storage
       localStorage.removeItem('stoichiometrix-session');
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    const handleLaunch = () => {
-      setIsChatLaunched(true);
-      setIsChatOpen(true);
-    };
-    
-    // Listen for the custom event dispatched by the button in index.html
-    document.addEventListener('launch-chat', handleLaunch);
-
-    return () => {
-      document.removeEventListener('launch-chat', handleLaunch);
-    };
   }, []);
 
   const handleUserSetup = (nickname: string, age: number) => {
@@ -113,47 +95,38 @@ const App: React.FC = () => {
     setInitialMessages(undefined);
     setProgress({});
     setFlashcardDecks({});
-    // When session is cleared, keep the chat window open to show the welcome screen.
-    setIsChatOpen(true); 
+    setIsChatLaunched(false);
   };
   
-  const toggleChat = () => setIsChatOpen(prev => !prev);
-
   if (isLoading) {
-    return null; // Don't render anything until session is loaded
-  }
-
-  // If the chat has not been launched via the main button (and no session exists),
-  // render nothing. The component is effectively invisible until the user acts.
-  if (!isChatLaunched) {
     return null;
   }
 
   return (
-    <div className="chatbot-widget-container">
-      {isChatOpen ? (
-        <div className="chat-window-container">
-          {!user ? (
-            <WelcomeScreen onSetupComplete={handleUserSetup} />
-          ) : (
-            <ChatWindow 
-              user={user} 
-              initialMessages={initialMessages}
-              onClearSession={handleClearSession} 
-              progress={progress}
-              onUpdateProgress={handleUpdateProgress}
-              onSaveFlashcards={handleSaveFlashcards}
-              savedFlashcardDecks={flashcardDecks}
-              onClose={toggleChat}
-            />
-          )}
-        </div>
+    <>
+      {!isChatLaunched ? (
+        <LandingPage onLaunch={() => setIsChatLaunched(true)} />
       ) : (
-         <button onClick={toggleChat} className="chat-fab" aria-label="Open chat">
-          <StoichiometryIcon className="w-8 h-8" />
-        </button>
+        <div className="w-screen h-screen p-4 sm:p-8 flex items-center justify-center">
+            <div className="w-full h-full max-w-lg mx-auto flex flex-col">
+              {!user ? (
+                <WelcomeScreen onSetupComplete={handleUserSetup} />
+              ) : (
+                <ChatWindow 
+                  user={user} 
+                  initialMessages={initialMessages}
+                  onClearSession={handleClearSession} 
+                  progress={progress}
+                  onUpdateProgress={handleUpdateProgress}
+                  onSaveFlashcards={handleSaveFlashcards}
+                  savedFlashcardDecks={flashcardDecks}
+                  onClose={() => setIsChatLaunched(false)}
+                />
+              )}
+            </div>
+        </div>
       )}
-    </div>
+    </>
   );
 };
 
