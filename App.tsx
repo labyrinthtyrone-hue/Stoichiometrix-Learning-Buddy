@@ -5,15 +5,9 @@ import { User, Message, ProgressState, FlashcardDeck } from './types';
 import { StoichiometryIcon, CloseIcon } from './components/IconComponents';
 
 const getInitialChatOpenState = (): boolean => {
-  try {
-    const savedSession = localStorage.getItem('stoichiometrix-session');
-    // Open if no session exists (first time user), otherwise keep it closed (as FAB).
-    return !savedSession;
-  } catch (e) {
-    console.error("Could not access localStorage", e);
-    // Default to closed if localStorage is not available.
-    return false;
-  }
+  // Always start with the chat window closed.
+  // The user must click the FAB or the launch button to open it.
+  return false;
 };
 
 const App: React.FC = () => {
@@ -50,6 +44,20 @@ const App: React.FC = () => {
       localStorage.removeItem('stoichiometrix-session');
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const launchButton = document.getElementById('launch-chatbot-btn');
+    if (launchButton) {
+      const handleLaunch = () => {
+        setIsChatOpen(true);
+      };
+      launchButton.addEventListener('click', handleLaunch);
+
+      return () => {
+        launchButton.removeEventListener('click', handleLaunch);
+      };
     }
   }, []);
 
