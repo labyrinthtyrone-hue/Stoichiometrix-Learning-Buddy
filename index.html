@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stoichiometrix - Your AI Chemistry Tutor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #e0f7fa; /* cyan-50 */
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #a5f3fc; /* cyan-200 */
+        border-radius: 3px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #67e8f9; /* cyan-300 */
+      }
+      .chat-bubble-bot {
+        position: relative;
+      }
+      .chat-bubble-bot::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 0;
+        height: 0;
+        border: 10px solid transparent;
+        border-right-color: #f1f5f9; /* slate-100 */
+        border-left: 0;
+        border-bottom: 0;
+        margin-left: -8px;
+        margin-bottom: 0px;
+      }
+      .chat-bubble-user {
+        position: relative;
+      }
+      .chat-bubble-user::after {
+        content: '';
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        width: 0;
+        height: 0;
+        border: 10px solid transparent;
+        border-left-color: #a78bfa; /* violet-400 */
+        border-right: 0;
+        border-bottom: 0;
+        margin-right: -8px;
+        margin-bottom: 0px;
+      }
+
+      /* Flashcard Styles */
+      .flashcard-container {
+        perspective: 1000px;
+      }
+      .flashcard {
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform 0.7s;
+        cursor: pointer;
+      }
+      .flashcard.is-flipped {
+        transform: rotateY(180deg);
+      }
+      .flashcard-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        text-align: center;
+      }
+      .flashcard-back {
+        transform: rotateY(180deg);
+      }
+
+      /* Chat Widget Styles */
+      .chat-fab {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        background-color: #a78bfa; /* violet-400 */
+        color: white;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        border: 2px solid black;
+        cursor: pointer;
+        transition: all 0.3s ease-in-out;
+        z-index: 999;
+      }
+      .chat-fab:hover {
+        transform: scale(1.1);
+        background-color: #8b5cf6; /* violet-500 */
+      }
+      .chat-window-container {
+        position: fixed;
+        bottom: 7rem;
+        right: 2rem;
+        width: 90vw;
+        max-width: 400px;
+        height: 70vh;
+        max-height: 600px;
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        z-index: 1000;
+        animation: slide-up 0.5s ease-in-out;
+      }
+      @keyframes slide-up {
+        from {
+          transform: translateY(100px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      @media (max-width: 640px) {
+        .chat-window-container {
+            bottom: 6rem;
+            right: 1rem;
+            width: calc(100vw - 2rem);
+            height: 75vh;
+        }
+        .chat-fab {
+            bottom: 1rem;
+            right: 1rem;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
+    "vite": "https://aistudiocdn.com/vite@^7.1.12",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.0",
+    "path": "https://aistudiocdn.com/path@^0.12.7",
+    "url": "https://aistudiocdn.com/url@^0.11.4"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gradient-to-br from-cyan-200 to-violet-300 font-sans text-slate-800">
+    <!-- Promotional Website Content -->
+    <div class="container mx-auto p-6 md:p-8">
+      <header class="text-center mb-16">
+        <h1 class="text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-violet-600 to-cyan-500 bg-clip-text text-transparent leading-tight">
+          Stuck on Stoichiometry?
+        </h1>
+        <p class="text-xl text-slate-600 mt-4 max-w-2xl mx-auto">
+          Meet <span class="font-bold text-violet-500">Stoichiometrix</span>, your personal AI tutor designed to make chemistry clear, engaging, and fun.
+        </p>
+      </header>
+      
+      <main>
+        <!-- What is Stoichiometrix? Section -->
+        <section class="max-w-3xl mx-auto mb-16">
+          <h2 class="text-3xl font-bold text-center text-slate-800 mb-6">What is Stoichiometrix?</h2>
+          <div class="bg-white/70 backdrop-blur-sm p-8 rounded-lg shadow-lg border border-slate-200 text-center border-t-4 border-violet-400">
+            <p class="text-slate-700 leading-relaxed text-lg">
+              Stoichiometrix is an intelligent chatbot created to help you conquer the challenges of high school chemistry. It's more than just a calculator; it's a patient and interactive learning partner that provides personalized guidance, step-by-step explanations, and instant feedback, 24/7.
+            </p>
+          </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="mb-16">
+          <h2 class="text-3xl font-bold text-center text-slate-800 mb-8">Everything You Need to Succeed</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            
+            <!-- Feature Card: Explanations -->
+            <div class="bg-white/60 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-slate-200 flex flex-col items-center text-center transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+              <div class="bg-cyan-100 p-3 rounded-full mb-4">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-cyan-600"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              </div>
+              <h3 class="font-bold text-xl mb-2 text-slate-800">Conceptual Explanations</h3>
+              <p class="text-slate-600 text-sm">Get clear, easy-to-understand explanations for complex topics like the mole concept, limiting reactants, and more.</p>
+            </div>
+            
+            <!-- Feature Card: Practice Problems -->
+            <div class="bg-white/60 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-slate-200 flex flex-col items-center text-center transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+              <div class="bg-violet-100 p-3 rounded-full mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-violet-600"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><path d="m16 13-3.1 3.1a.5.5 0 0 0 0 .7l1.4 1.4a.5.5 0 0 0 .7 0L18 15" /><path d="m12 17 4.5-4.5" /></svg>
+              </div>
+              <h3 class="font-bold text-xl mb-2 text-slate-800">Practice Problems</h3>
+              <p class="text-slate-600 text-sm">Solve a variety of problems and get instant feedback with detailed, step-by-step solutions to guide you.</p>
+            </div>
+            
+            <!-- Feature Card: Quizzes -->
+            <div class="bg-white/60 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-slate-200 flex flex-col items-center text-center transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+              <div class="bg-green-100 p-3 rounded-full mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-green-600"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" /><path d="m9 12 2 2 4-4" /></svg>
+              </div>
+              <h3 class="font-bold text-xl mb-2 text-slate-800">Interactive Quizzes</h3>
+              <p class="text-slate-600 text-sm">Test your knowledge with quizzes on different topics and difficulty levels to track your progress.</p>
+            </div>
+
+            <!-- Feature Card: Balancer -->
+            <div class="bg-white/60 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-slate-200 flex flex-col items-center text-center transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+              <div class="bg-red-100 p-3 rounded-full mb-4">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-red-600"><path d="m21.28 17.28-2.56-2.56" /><path d="M12.01 12.01 9.45 9.45" /><path d="m2 2 10 10" /><path d="M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18Z" /><path d="M18.72 21.28 16 18.56" /><path d="M14.56 16 12 13.44" /><path d="M4 12H2" /><path d="M12 4V2" /><path d="M20 12h2" /><path d="M12 22v-2" /></svg>
+              </div>
+              <h3 class="font-bold text-xl mb-2 text-slate-800">Equation Balancer</h3>
+              <p class="text-slate-600 text-sm">Input any chemical equation and get the balanced result in seconds, along with an explanation of how it's done.</p>
+            </div>
+
+            <!-- Feature Card: Flashcards -->
+            <div class="bg-white/60 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-slate-200 flex flex-col items-center text-center transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+              <div class="bg-yellow-100 p-3 rounded-full mb-4">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-yellow-600"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect><path d="M7 16h10" /><path d="M7 12h10" /><path d="M7 8h2" /></svg>
+              </div>
+              <h3 class="font-bold text-xl mb-2 text-slate-800">Flashcard Decks</h3>
+              <p class="text-slate-600 text-sm">Generate and study flashcards for key terms, definitions, and formulas to reinforce your memory.</p>
+            </div>
+
+             <!-- Feature Card: Personalized -->
+            <div class="bg-white/60 backdrop-blur-sm p-6 rounded-lg shadow-lg border border-slate-200 flex flex-col items-center text-center transition-all duration-300 transform hover:scale-105 hover:shadow-xl">
+              <div class="bg-indigo-100 p-3 rounded-full mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 text-indigo-600"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              </div>
+              <h3 class="font-bold text-xl mb-2 text-slate-800">Personalized Learning</h3>
+              <p class="text-slate-600 text-sm">The chatbot adapts its teaching style based on your age and progress, providing a truly customized learning experience.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Call to Action Section -->
+        <section class="text-center bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white p-10 rounded-lg shadow-2xl">
+          <h2 class="text-3xl font-bold mb-4">Ready to Master Stoichiometry?</h2>
+          <p class="text-lg mb-6 max-w-xl mx-auto">
+            Experience all these features for yourself! Click the floating chat button at the bottom-right of the page to start your first lesson with Stoichiometrix now.
+          </p>
+          <div class="text-6xl animate-bounce text-white drop-shadow-lg">
+            &#8600;
+          </div>
+        </section>
+      </main>
+    </div>
+    <!-- End Promotional Content -->
+    
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
