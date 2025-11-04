@@ -1,8 +1,17 @@
 import { GoogleGenAI, Chat, GenerateContentResponse, Type, Content } from "@google/genai";
 import { User, ChatSession, QuizData, QuizQuestion, PracticeProblemData, Message, MessageSender, Flashcard } from '../types';
 
-// Per guidelines, API key must be from process.env.API_KEY
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+let ai: GoogleGenAI;
+
+function getAi() {
+    if (!ai) {
+        // Per guidelines, API key must be from process.env.API_KEY
+        // This will only be called when a function needs the AI service,
+        // preventing a crash on app load if the key is missing.
+        ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+    }
+    return ai;
+}
 
 // Per guidelines, use gemini-2.5-flash for basic text tasks
 const model = 'gemini-2.5-flash';
@@ -111,7 +120,7 @@ export const createChatSession = async (user: User, history: Message[] = []): Pr
         parts: [{ text: m.text }]
     }));
 
-  const chat = ai.chats.create({
+  const chat = getAi().chats.create({
     model: model,
     history: geminiHistory,
     config: {
@@ -137,7 +146,7 @@ export const generateQuiz = async (difficulty: string, count: string = '5'): Pro
     try {
         const prompt = `Generate a ${difficulty} quiz with ${count} multiple-choice questions about stoichiometry. Each question must have exactly 4 options.`;
 
-        const response = await ai.models.generateContent({
+        const response = await getAi().models.generateContent({
             model: model,
             contents: prompt,
             config: {
@@ -168,7 +177,7 @@ export const generatePracticeProblem = async (topic: string, user: User): Promis
     try {
         const prompt = `Generate a 'normal' difficulty stoichiometry practice problem about "${topic}" suitable for a ${user.age}-year-old. The problem should require a calculation.`;
 
-        const response = await ai.models.generateContent({
+        const response = await getAi().models.generateContent({
             model: model,
             contents: prompt,
             config: {
@@ -193,7 +202,7 @@ export const generatePracticeProblem = async (topic: string, user: User): Promis
 export const generateFlashcards = async (topic: string, count: string): Promise<Flashcard[] | null> => {
     try {
         const prompt = `Generate ${count} flashcards for the stoichiometry topic: "${topic}". For each card, provide a key 'term' and a concise 'definition'. The term could be a concept, formula, or vocabulary word. The definition should be clear and for a high school student to understand.`;
-        const response = await ai.models.generateContent({
+        const response = await getAi().models.generateContent({
             model: model,
             contents: prompt,
             config: {
@@ -217,7 +226,7 @@ export const generateFlashcards = async (topic: string, count: string): Promise<
 export const balanceEquation = async (reactants: string, products: string): Promise<string> => {
     try {
         const prompt = `Balance the chemical equation: ${reactants} -> ${products}. Explain the steps to balance it clearly.`;
-        const response = await ai.models.generateContent({
+        const response = await getAi().models.generateContent({
             model: model,
             contents: prompt,
         });
@@ -235,7 +244,7 @@ export const getConceptualExplanation = async (topic: string, user: User): Promi
         Start with a simple definition, then provide a relatable analogy or real-world example.
         Do not ask any follow-up questions, just provide the explanation.`;
 
-        const response = await ai.models.generateContent({
+        const response = await getAi().models.generateContent({
             model: model,
             contents: prompt,
         });
