@@ -2,13 +2,7 @@ import React, { useState, useEffect } from 'react';
 import WelcomeScreen from './components/WelcomeScreen';
 import ChatWindow from './components/ChatWindow';
 import { User, Message, ProgressState, FlashcardDeck } from './types';
-import { StoichiometryIcon, CloseIcon } from './components/IconComponents';
-
-const getInitialChatOpenState = (): boolean => {
-  // Always start with the chat window closed.
-  // The user must click the FAB or the launch button to open it.
-  return false;
-};
+import { StoichiometryIcon } from './components/IconComponents';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -16,12 +10,17 @@ const App: React.FC = () => {
   const [progress, setProgress] = useState<ProgressState>({});
   const [flashcardDecks, setFlashcardDecks] = useState<{ [topic: string]: FlashcardDeck }>({});
   const [isLoading, setIsLoading] = useState(true);
-  const [isChatOpen, setIsChatOpen] = useState(getInitialChatOpenState());
+  const [isChatLaunched, setIsChatLaunched] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     try {
       const savedSession = localStorage.getItem('stoichiometrix-session');
       if (savedSession) {
+        // If a session exists, the widget has been used before.
+        // Show the FAB for returning users.
+        setIsChatLaunched(true);
+
         const { user: savedUser, messages: savedMessages } = JSON.parse(savedSession);
         if (savedUser && savedMessages) {
           setUser(savedUser);
@@ -49,6 +48,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const handleLaunch = () => {
+      setIsChatLaunched(true);
       setIsChatOpen(true);
     };
     
@@ -117,11 +117,17 @@ const App: React.FC = () => {
     setIsChatOpen(true); 
   };
   
+  const toggleChat = () => setIsChatOpen(prev => !prev);
+
   if (isLoading) {
     return null; // Don't render anything until session is loaded
   }
 
-  const toggleChat = () => setIsChatOpen(prev => !prev);
+  // If the chat has not been launched via the main button (and no session exists),
+  // render nothing. The component is effectively invisible until the user acts.
+  if (!isChatLaunched) {
+    return null;
+  }
 
   return (
     <div className="chatbot-widget-container">
